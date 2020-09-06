@@ -5,10 +5,14 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"reflect"
 	"strconv"
 
+	"./db"
+	_ "github.com/go-sql-driver/mysql"
 	"github.com/gorilla/mux"
+	"github.com/t0w4/toDoListBackend/controller"
 )
 
 type Article struct {
@@ -95,19 +99,34 @@ func main() {
 	router := mux.NewRouter()
 
 	// エンドポイント
-	router.HandleFunc("/articles", getArticles).Methods("GET")
-	router.HandleFunc("/articles/{id}", getArticle).Methods("GET")
-	router.HandleFunc("/articles", addArticle).Methods("POST")
-	router.HandleFunc("/articles", updateArticle).Methods("PUT")
-	router.HandleFunc("/articles/{id}", removeArticle).Methods("DELETE")
+	// router.HandleFunc("/articles", getArticles).Methods("GET")
+	// router.HandleFunc("/articles/{id}", getArticle).Methods("GET")
+	// router.HandleFunc("/articles", addArticle).Methods("POST")
+	// router.HandleFunc("/articles", updateArticle).Methods("PUT")
+	// router.HandleFunc("/articles/{id}", removeArticle).Methods("DELETE")
 
-	articles = append(articles,
-		Article{ID: 1, Title: "Article1", Author: "Gopher", PostDate: "2019/1/1"},
-		Article{ID: 2, Title: "Article2", Author: "Gopher", PostDate: "2019/2/2"},
-		Article{ID: 3, Title: "Article3", Author: "Gopher", PostDate: "2019/3/3"},
-		Article{ID: 4, Title: "Article4", Author: "Gopher", PostDate: "2019/4/4"},
-		Article{ID: 5, Title: "Article5", Author: "Gopher", PostDate: "2019/5/5"},
-	)
+	// articles = append(articles,
+	// 	Article{ID: 1, Title: "Article1", Author: "Gopher", PostDate: "2019/1/1"},
+	// 	Article{ID: 2, Title: "Article2", Author: "Gopher", PostDate: "2019/2/2"},
+	// 	Article{ID: 3, Title: "Article3", Author: "Gopher", PostDate: "2019/3/3"},
+	// 	Article{ID: 4, Title: "Article4", Author: "Gopher", PostDate: "2019/4/4"},
+	// 	Article{ID: 5, Title: "Article5", Author: "Gopher", PostDate: "2019/5/5"},
+	// )
+
+	dbConn, err := db.Init()
+	if err != nil {
+		log.Printf("db init failed: %v", err)
+		os.Exit(1)
+	}
+
+	tc := &controller.TaskController{dbConn}
+	router.HandleFunc("/tasks", tc.CreateTask).Methods(http.MethodPost, http.MethodOptions)
+	router.HandleFunc("/tasks", tc.GetTasks).Methods(http.MethodGet)
+	router.HandleFunc("/tasks/{uuid}", tc.GetTask).Methods(http.MethodGet)
+	router.HandleFunc("/tasks/{uuid}", tc.PutTask).Methods(http.MethodPut)
+	router.HandleFunc("/tasks/{uuid}", tc.DeleteTask).Methods(http.MethodDelete, http.MethodOptions)
+	log.Print(http.ListenAndServe("0.0.0.0:8080", router))
+	os.Exit(1)
 
 	// Start Server
 	log.Println("Listen Server ....")
